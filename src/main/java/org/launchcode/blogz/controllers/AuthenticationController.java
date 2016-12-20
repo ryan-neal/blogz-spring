@@ -20,7 +20,37 @@ public class AuthenticationController extends AbstractController {
 	@RequestMapping(value = "/signup", method = RequestMethod.POST)
 	public String signup(HttpServletRequest request, Model model) {
 		
-		// TODO - implement signup
+		String username = request.getParameter("username");
+		String password = request.getParameter("password");
+		String verify = request.getParameter("verify");
+		HttpSession session = request.getSession();
+		
+		User exists = userDao.findByUsername(username);
+		
+		if (exists != null){
+			model.addAttribute("username error", "A user with that name already exists. Please choose another name");
+			return "signup";
+		}
+		
+		if (!User.isValidUsername(username)) {
+			model.addAttribute("username_error", "Usernames must be 5-12 characters long, start with a letter, and contain only letters, numbers, _, or -");
+			return "signup";
+		}
+		
+		if (!User.isValidPassword(password)) {
+			model.addAttribute("password_error", "Passwords must be 6-20 characters long and may not contain spaces");
+			return "signup";
+		}
+		
+		if (!password.equals(verify)) {
+			model.addAttribute("username", username);
+			model.addAttribute("verify_error", "Passwords do not match");
+			return "signup";
+		}		
+		
+		User newUser = new User(username, password);
+        userDao.save(newUser);
+        setUserInSession(session, newUser);
 		
 		return "redirect:blog/newpost";
 	}
@@ -33,7 +63,22 @@ public class AuthenticationController extends AbstractController {
 	@RequestMapping(value = "/login", method = RequestMethod.POST)
 	public String login(HttpServletRequest request, Model model) {
 		
-		// TODO - implement login
+		String username = request.getParameter("username");
+		String password = request.getParameter("password");
+		
+		User user = userDao.findByUsername(username);
+		
+		if (user == null){
+			model.addAttribute("Error", "User doesn't exist");
+			return "login";
+		}
+		
+		if (!user.isMatchingPassword(password)){
+			model.addAttribute("Error", "incorrect password");
+			return "login";
+		}
+		
+		setUserInSession(request.getSession(), user);
 		
 		return "redirect:blog/newpost";
 	}
